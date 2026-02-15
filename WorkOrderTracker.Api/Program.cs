@@ -41,29 +41,32 @@ app.MapGet("/api/workorders", async (AppDbContext db) =>
 })
 .WithName("GetWorkOrders");
 
-app.MapGet("/api/workdorders/{id:int}", async (int id, AppDbContext db) =>
+app.MapGet("/api/workorders/{id:int}", async (int id, AppDbContext db) =>
 {
     var order = await db.WorkOrders.FindAsync(id);
 
     return order is null
-    ? Results.NotFound(id) : Results.Ok(order);
-});
+    ? Results.NotFound() : Results.Ok(order);
+}).WithName("GetWorkOrderById");
 
 app.MapPost("/api/workorders", async (AppDbContext db, CreateWorkOrderRequest req) =>
 {
-    if(string.IsNullOrWhiteSpace(req.Title))
+    var title = req.Title?.Trim();
+    if(string.IsNullOrWhiteSpace(title))
     {
         return Results.BadRequest("title is required");
     }
-    if(req.Title.Length>100)
+    if(title.Length>100)
     {
         return Results.BadRequest("Title must be smaller than 100 characters");
     }
 
+    var description = req.Description?.Trim();
+
     WorkOrder wo = new WorkOrder
     {
-        Title = req.Title.Trim(),
-        Description = req.Description,
+        Title = title,
+        Description = description,
         Status="New",
         CreatedAtUtc = DateTime.UtcNow
     };
@@ -76,6 +79,53 @@ app.MapPost("/api/workorders", async (AppDbContext db, CreateWorkOrderRequest re
 
 })
 .WithName("CreateWorkOrder");
+
+app.MapPut("/api/workorders/{id:int}", async (int id,UpdateWorkOrderRequest req  ,AppDbContext db) =>
+{
+    var title = req.Title?.Trim();
+    if (string.IsNullOrWhiteSpace(title))
+    {
+        return Results.BadRequest("title is required");
+    }
+    if (title.Length > 100)
+    {
+        return Results.BadRequest("Title must be smaller than 100 characters");
+    }
+    var status = req.Status?.Trim();
+    if(string.IsNullOrWhiteSpace(status))
+    {
+        return Results.BadRequest("Status is required");
+    }
+
+    var description = req.Description?.Trim();
+
+    var order = await db.WorkOrders.FindAsync(id);
+
+    if (order is null)
+    {
+        return Results.NotFound();
+    }
+
+    order.Title = title;
+    order.Status = status;
+    order.Description = description;
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(order);
+})
+.WithName("UpdateWorkOrder");
+
+app.MapDelete("/api/workorders/{id:int}",async(int id, AppDbContext db) =>
+{
+    var order = await db.WorkOrders.FindAsync(id);
+    if (order is null) { return Results.NotFound(); }
+
+    db.WorkOrders.Remove(order);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+}).WithName("DeleteWorkOrder");
 
 
 
