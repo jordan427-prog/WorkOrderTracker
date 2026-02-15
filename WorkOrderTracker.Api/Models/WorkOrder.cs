@@ -1,5 +1,7 @@
 ﻿namespace WorkOrderTracker.Api.Models;
 
+// This is the actual DB schema, so incomig data will come in as a CreateOrderRequest and have to be mapped to this
+
 public class WorkOrder
 {
     public int Id { get; set; }                  // Primary key (EF recognizes "Id" automatically)
