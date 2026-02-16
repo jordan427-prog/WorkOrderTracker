@@ -41,10 +41,52 @@ if (app.Environment.IsDevelopment())
 // AppDbContext is ASP.NET injecting my DB context
 // db.WorkOrders is the work orders table
 // returns a list as JSON with 200 OK
-app.MapGet("/api/workorders", async (AppDbContext db) =>
+app.MapGet("/api/workorders", async (AppDbContext db, string? status, int page = 1, int pageSize = 20) =>
 {
-    var orders = await db.WorkOrders.OrderByDescending(w => w.Id).ToListAsync();
-     return Results.Ok(orders);
+    // Let's ensure page and page size are guarded
+    if(page <1)
+    {
+        page = 1;
+    }
+    if(pageSize < 1)
+    {
+        pageSize = 20;
+    }
+    if(pageSize>100)
+    {
+        pageSize = 100;
+    }
+
+    // Setup SQL query
+    var query = db.WorkOrders.AsQueryable();
+
+
+    var st = status?.Trim();
+
+    // Optional filter for status may be incoming
+    // Add status to SQL query
+    if (!string.IsNullOrWhiteSpace(st))
+    {
+        // Normalize to a single case so EF Core can translate to SQL (LOWER/UPPER)
+        var stNormalized = st.ToUpperInvariant();
+        query = query.Where(w =>
+            w.Status != null &&
+            w.Status.ToUpper() == stNormalized);
+    }
+
+    // Total count for pagination UI ( gives us a count(*) )
+    var total = await query.CountAsync();
+
+    //20 touples per page, so order IDs, skip previous pages, take a list of touples for that page size
+    var items = await query.OrderByDescending(x=>x.Id).Skip((page-1)*pageSize).Take(pageSize).ToListAsync();
+
+    return Results.Ok(new
+    {
+        total,
+        page,
+        pageSize,
+        items
+    });
 })
 .WithName("GetWorkOrders");
 
@@ -107,7 +149,7 @@ app.MapPut("/api/workorders/{id:int}", async (int id,UpdateWorkOrderRequest req 
 
     if(!allowedStatus.Contains(status))
     {
-        return Results.BadRequest("Status is required and must be either: Done, InProgress, Blocked, or Done");
+        return Results.BadRequest("Status is required and must be either: Done, InProgress, Blocked, or New");
     }
     if(string.IsNullOrWhiteSpace(status))
     {
