@@ -20,6 +20,15 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ViteDev", p =>
+        p.WithOrigins("http://localhost:5173")
+         .AllowAnyHeader()
+         .AllowAnyMethod());
+});
+
+
 var app = builder.Build();
 
 HashSet<string> allowedStatus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -37,6 +46,10 @@ if (app.Environment.IsDevelopment())
 }
 
 //app.UseHttpsRedirection();
+
+app.UseCors("ViteDev");
+
+
 
 // AppDbContext is ASP.NET injecting my DB context
 // db.WorkOrders is the work orders table
