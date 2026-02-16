@@ -128,46 +128,58 @@ app.MapPost("/api/workorders", async (AppDbContext db, CreateWorkOrderRequest re
 
 })
 .WithName("CreateWorkOrder");
-
-app.MapPut("/api/workorders/{id:int}", async (int id,UpdateWorkOrderRequest req  ,AppDbContext db) =>
+static void AddErrors(Dictionary<string, List<string>> errors, string key, string errorMessage)
 {
+    if (!errors.ContainsKey(key))
+    {
+        errors[key] = new List<string>();
+    }
+    errors[key].Add(errorMessage);
+}
+
+app.MapPut("/api/workorders/{id:int}", async (int id, UpdateWorkOrderRequest req, AppDbContext db) =>
+{
+    Dictionary<string, List<string>> errorList = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
     var order = await db.WorkOrders.FindAsync(id);
 
     if (order is null)
     {
-        return Results.NotFound();
+        AddErrors(errorList, "Id", $"No order with{id} was found");
     }
 
     var title = req.Title?.Trim();
     if (string.IsNullOrWhiteSpace(title))
     {
-        return Results.BadRequest("title is required");
+        AddErrors(errorList, "Title", "Title is required");
     }
-    if (title.Length > 100)
+    if (!string.IsNullOrWhiteSpace(title) && title.Length > 100)
     {
-        return Results.BadRequest("Title must be smaller than 100 characters");
+        AddErrors(errorList, "Title", "Title must be smaller than 100 characters");
     }
     var status = req.Status?.Trim();
 
-    if(string.IsNullOrWhiteSpace(status))
+    if (string.IsNullOrWhiteSpace(status))
     {
-        return Results.BadRequest("Status is needed");
+        AddErrors(errorList, "Status", "Status is required");
     }
 
-    if(!allowedStatus.Contains(status))
+    if (!string.IsNullOrWhiteSpace(status) && !allowedStatus.Contains(status))
     {
-        return Results.BadRequest("Status is required and must be either: Done, InProgress, Blocked, or New");
+        AddErrors(errorList, "Status", "Status must be either: " + string.Join(",", allowedStatus));
     }
-    if(string.IsNullOrWhiteSpace(status))
+
+    if (errorList.Count > 0)
     {
-        return Results.BadRequest("Status is required");
+        return Results.BadRequest(errorList);
     }
 
     var description = req.Description?.Trim();
 
-    order.Title = title;
-    order.Status = status;
+    // order is guaranteed not null here due to error check above
+    // title and status are guaranteed not null due to error check above
+    order!.Title = title!;
+    order.Status = status!;
     order.Description = description;
 
     await db.SaveChangesAsync();
