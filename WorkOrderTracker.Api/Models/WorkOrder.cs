@@ -13,4 +13,5 @@ public class WorkOrder
     public string Status { get; set; } = "New";  // Simple status for now
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? LastEditedAtUtc { get; set; }
 }

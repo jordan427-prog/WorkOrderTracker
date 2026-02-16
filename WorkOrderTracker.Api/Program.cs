@@ -116,8 +116,9 @@ app.MapPost("/api/workorders", async (AppDbContext db, CreateWorkOrderRequest re
     {
         Title = title,
         Description = description,
-        Status="New",
-        CreatedAtUtc = DateTime.UtcNow
+        Status = "New",
+        CreatedAtUtc = DateTime.UtcNow,
+        LastEditedAtUtc = null
     };
 
     db.WorkOrders.Add(wo);
@@ -181,6 +182,7 @@ app.MapPut("/api/workorders/{id:int}", async (int id, UpdateWorkOrderRequest req
     order!.Title = title!;
     order.Status = status!;
     order.Description = description;
+    order.LastEditedAtUtc = DateTime.UtcNow;
 
     await db.SaveChangesAsync();
 
