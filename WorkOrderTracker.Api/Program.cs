@@ -131,6 +131,14 @@ app.MapPost("/api/workorders", async (AppDbContext db, CreateWorkOrderRequest re
 
 app.MapPut("/api/workorders/{id:int}", async (int id,UpdateWorkOrderRequest req  ,AppDbContext db) =>
 {
+
+    var order = await db.WorkOrders.FindAsync(id);
+
+    if (order is null)
+    {
+        return Results.NotFound();
+    }
+
     var title = req.Title?.Trim();
     if (string.IsNullOrWhiteSpace(title))
     {
@@ -157,13 +165,6 @@ app.MapPut("/api/workorders/{id:int}", async (int id,UpdateWorkOrderRequest req 
     }
 
     var description = req.Description?.Trim();
-
-    var order = await db.WorkOrders.FindAsync(id);
-
-    if (order is null)
-    {
-        return Results.NotFound();
-    }
 
     order.Title = title;
     order.Status = status;
