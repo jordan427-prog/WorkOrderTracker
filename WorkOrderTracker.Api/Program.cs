@@ -190,10 +190,12 @@ app.MapPut("/api/workorders/{id:int}", async (int id, UpdateWorkOrderRequest req
 
     var description = req.Description?.Trim();
 
+    // standardize statuses to the allowed status with case insensitivity, so we can be sure the DB has consistent values for status
+    string stat = allowedStatus.First(s => s.Equals(status, StringComparison.OrdinalIgnoreCase))!;
     // order is guaranteed not null here due to error check above
     // title and status are guaranteed not null due to error check above
     order!.Title = title!;
-    order.Status = status!;
+    order.Status = stat;
     order.Description = description;
     order.LastEditedAtUtc = DateTime.UtcNow;
 
