@@ -11,4 +11,5 @@ public class AppDbContext : DbContext
 
     // All new models need to be registered here
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+    public DbSet<Note> Notes => Set<Note>();
 }
