@@ -14,4 +14,6 @@ public class WorkOrder
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? LastEditedAtUtc { get; set; }
+
+    public List<Note> Notes { get; set; } = new List<Note>(); // Navigation property for related notes
 }

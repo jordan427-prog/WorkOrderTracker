@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using WorkOrderTracker.Api.Data;
 using WorkOrderTracker.Api.Models;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -215,6 +216,89 @@ app.MapDelete("/api/workorders/{id:int}",async(int id, AppDbContext db) =>
 
     return Results.NoContent();
 }).WithName("DeleteWorkOrder");
+
+// APIs for Notes
+
+app.MapGet("/api/workorders/{workOrderId:int}/notes", async (int workOrderId, AppDbContext db) =>
+{
+    var wo = await db.WorkOrders.FindAsync(workOrderId);
+
+    if(wo is null)
+    {
+        return Results.NotFound();
+    }
+    var q = db.Notes.AsQueryable();
+
+    q = q.Where(n => n.WorkOrderId.Equals(workOrderId));
+
+    var count = await  q.CountAsync();
+    var items = await q
+    .OrderByDescending(n => n.Id)
+    .Select(n => new
+    {
+        n.Id,
+        n.WorkOrderId,
+        n.Content,
+        n.CreatedAtUtc
+    })
+    .ToListAsync();
+
+    return Results.Ok(new
+    {
+        count,
+        items
+    });
+}).WithName("GetWorkOrderNotes");
+
+app.MapPost("/api/workorders/{workOrderId:int}/notes", async (int workOrderId, CreateNote dto, AppDbContext db) =>
+{
+    Dictionary<string, List<string>> errors = new Dictionary<string, List<string>>();
+
+    var wo = await db.WorkOrders.FindAsync(workOrderId);
+
+    if(wo is null) 
+    {
+        AddErrors(errors, "Parent work order", "Work order does not exist");
+        //return Results.NotFound("Work order not found"); 
+    }
+
+    if(string.IsNullOrWhiteSpace(dto.Content))
+    {
+        AddErrors(errors, "Content", "A note requires content and may not be empty");
+        //return Results.BadRequest("Note content is empty");
+    }
+    if (!string.IsNullOrWhiteSpace(dto.Content))
+    {
+        var cont = dto.Content.Trim();
+
+        if (cont.Length > 1000)
+        {
+            AddErrors(errors, "Content", "Length of note content should be less than or equal to 1000 character");
+        }
+    }
+
+    if(errors.Count>0)
+    {
+        return Results.BadRequest(errors);
+    }
+
+    var note = new Note
+    {
+        Content = dto.Content.Trim(),
+        WorkOrderId = workOrderId
+    };
+
+    db.Notes.Add(note);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/workorders/{workOrderId}/notes/{note.Id}", new
+    {
+        note.Id,
+        note.WorkOrderId,
+        note.Content,
+        note.CreatedAtUtc
+    });
+
+}).WithName("CreateNote");
 
 
 
