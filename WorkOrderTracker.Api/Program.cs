@@ -252,7 +252,7 @@ app.MapGet("/api/workorders/{workOrderId:int}/notes", async (int workOrderId, Ap
 
 app.MapPost("/api/workorders/{workOrderId:int}/notes", async (int workOrderId, CreateNote dto, AppDbContext db) =>
 {
-    Dictionary<string, List<string>> errors = new Dictionary<string, List<string>>();
+    Dictionary<string, List<string>> errors = new(StringComparer.OrdinalIgnoreCase);
 
     var wo = await db.WorkOrders.FindAsync(workOrderId);
 
@@ -299,6 +299,132 @@ app.MapPost("/api/workorders/{workOrderId:int}/notes", async (int workOrderId, C
     });
 
 }).WithName("CreateNote");
+
+app.MapPut("/api/workorders/{workOrderId:int}/notes/{noteId:int}", async (int workOrderId, int noteId, UpdateNote dto, AppDbContext db) =>
+{
+    Dictionary<string, List<string>> errors = new(StringComparer.OrdinalIgnoreCase);
+
+    if (workOrderId <= 0) 
+    {
+        AddErrors(errors, "WorkOrder", "Work order ID can not be zero or negative");
+        //return Results.BadRequest("Work order ID can not be zero or negative"); 
+    }
+    if (noteId <= 0)
+    {
+        AddErrors(errors, "Note", "Note ID can not be zero or negative");
+        //return Results.BadRequest("Note ID can not be zero or negative");
+    }
+
+    var wo = await db.WorkOrders.FindAsync(workOrderId);
+
+    if (wo is null)
+    {
+        AddErrors(errors, "WorkOrder", "Work order not found");
+        //return Results.NotFound();
+    }
+
+    var note = await db.Notes.FindAsync(noteId);
+
+    if (note is null)
+    {
+        AddErrors(errors, "Note", "Note not found");
+        //return Results.NotFound();
+    }
+
+    if (string.IsNullOrWhiteSpace(dto.Content))
+    {
+        AddErrors(errors, "DTO", "Incoming content must not be empty");
+        //return Results.BadRequest("Note content is required");
+    }
+
+    if ((!string.IsNullOrWhiteSpace(dto.Content)) && dto.Content.Trim().Length > 1000)
+    {
+        AddErrors(errors, "DTO", "Note content must be below 1000 characters.");
+        //return Results.BadRequest("Note content must be below 1000 characters.");
+    }
+
+
+
+    if ((note is not null) && (wo is not null) && note.WorkOrderId != workOrderId)
+    {
+        AddErrors(errors, "Parent ID", "The Note does not belong to the Work Order provided");
+        //return Results.BadRequest("The Note does not belong to the Work Order provided");
+    }
+
+    if (errors.Count>0)
+    {
+        return Results.BadRequest(errors);
+    }
+
+    string cont = dto.Content.Trim();
+
+
+    note!.Content = cont;
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+        {
+            note.Id,
+            note.WorkOrderId,
+            note.Content,
+            note.CreatedAtUtc
+        }
+        );
+
+
+}).WithName("UpdateNote");
+
+app.MapDelete("/api/workorders/{workOrderId:int}/notes/{noteId:int}", async (int workOrderId, int noteId, AppDbContext db) =>
+{
+    Dictionary<string, List<string>> errors = new(StringComparer.OrdinalIgnoreCase);
+
+    if (workOrderId <=0)
+    {
+        AddErrors(errors, "WorkOrderId", "Work Order ID must be above 0");
+    }
+
+    if(noteId <= 0)
+    {
+        AddErrors(errors, "Note Id", "Note ID must be above 0");
+    }
+
+    var wo = await db.WorkOrders.FindAsync(workOrderId);
+
+    if (wo is null)
+    {
+        AddErrors(errors, "WorkOrder", "Work order not found");
+    }
+
+    var note = await db.Notes.FindAsync(noteId);
+
+    if (note is null)
+    {
+        AddErrors(errors, "Note", "Note not found");
+    }
+
+    if ((note is not null) && (wo is not null) && note.WorkOrderId != workOrderId)
+    {
+        AddErrors(errors, "Parent ID", "The Note does not belong to the Work Order provided");
+    }
+
+    if (errors.Count > 0)
+    {
+        return Results.BadRequest(errors);
+    }
+
+    int affected = await db.Notes
+    .Where(n => n.Id == noteId && n.WorkOrderId == workOrderId)
+    .ExecuteDeleteAsync();
+
+    if (affected ==0)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.NoContent();
+
+}).WithName("DeleteNote");
 
 
 
