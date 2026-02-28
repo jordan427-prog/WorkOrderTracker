@@ -250,6 +250,43 @@ app.MapGet("/api/workorders/{workOrderId:int}/notes", async (int workOrderId, Ap
     });
 }).WithName("GetWorkOrderNotes");
 
+app.MapGet("/api/workorders/{workOrderId:int}/notes/{Id:int}", async (int workOrderId, int Id, AppDbContext db) =>
+{
+    var wo = await db.WorkOrders.FindAsync(workOrderId);
+
+    if (wo is null)
+    {
+        return Results.NotFound();
+    }
+    var q = db.Notes.AsQueryable();
+
+    q = q.Where(n => n.WorkOrderId.Equals(workOrderId) && n.Id.Equals(Id));
+
+    var note = await q.Select(n => new
+    {
+        n.Id,
+        n.Content,
+        n.CreatedAtUtc
+    }).FirstOrDefaultAsync();
+
+    if(note is null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(note);
+
+}).WithName("GetNoteByIdWithParentId");
+
+app.MapGet("/api/workorders/notes/{id:int}", async (int id, AppDbContext db) =>
+{
+    var note = await db.Notes.FindAsync(id);
+
+    return note is null
+    ? Results.NotFound() : Results.Ok(note);
+}).WithName("GetNoteById");
+
+
 app.MapPost("/api/workorders/{workOrderId:int}/notes", async (int workOrderId, CreateNote dto, AppDbContext db) =>
 {
     Dictionary<string, List<string>> errors = new(StringComparer.OrdinalIgnoreCase);
