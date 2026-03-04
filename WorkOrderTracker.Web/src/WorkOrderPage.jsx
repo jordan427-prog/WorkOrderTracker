@@ -24,7 +24,22 @@ export default function WorkOrderPage() {
       }
     }
     loadNotes();
-  }, []);
+  }, [id]);
+
+  async function deleteWorkOrder(Id) {
+    try {
+      const resp = await fetch(`/api/workorders/${Id}`, {
+        method: "DELETE",
+      });
+      if (!resp.ok) {
+        throw new Error(`Failed to delete Work Order ${Id}`);
+      }
+
+      navigate(`/`);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   return (
     <div>
@@ -44,6 +59,12 @@ export default function WorkOrderPage() {
           </li>
         ))}
       </ol>
+      <br />
+      <button onClick={() => navigate(`/`)}>Back</button>
+      <br />
+      <button onClick={() => deleteWorkOrder(id)} disabled={!id}>
+        Delete
+      </button>
     </div>
   );
 }
