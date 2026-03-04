@@ -33,11 +33,13 @@ export default function WorkOrdersListPage() {
       <ol id="orders">
         {workorders.map((o) => (
           <li key={o.id}>
-            Item: {o.title}
+            Title: {o.title}
             <br />
             Status: {o.status}
             <br />
             Description: {o.description}
+            <br />
+            ID: {o.id}
             <br />
             <button onClick={() => navigate(`/notes/${o.id}`)}>
               Get Details
@@ -46,6 +48,10 @@ export default function WorkOrdersListPage() {
           </li>
         ))}
       </ol>
+      <br />
+      <button onClick={() => navigate("/createWorkOrder")}>
+        Create New Work Order
+      </button>
     </div>
   );
 }
