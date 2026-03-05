@@ -62,6 +62,10 @@ export default function WorkOrderPage() {
       <br />
       <button onClick={() => navigate(`/`)}>Back</button>
       <br />
+      <button onClick={() => navigate(`/createNote/${id}`)}>
+        Create New Note
+      </button>
+      <br />
       <button onClick={() => deleteWorkOrder(id)} disabled={!id}>
         Delete
       </button>
